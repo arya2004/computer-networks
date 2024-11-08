@@ -1,71 +1,47 @@
-
-
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Scanner;
 
-/**
- * UDP Client that sends messages to a UDP Server running on the same machine.
- * The client continues to send messages until the user inputs "bye".
- */
 public class UDPClient {
-
-    private static final int SERVER_PORT = 1234; // The port on which the server is listening
-    private static final String SERVER_ADDRESS = "localhost"; // Server IP address (localhost for testing)
+    private static final String SERVER_ADDRESS = "localhost";
+    private static final int SERVER_PORT = 9876;
+    private static final int BUFFER_SIZE = 1024;
 
     public static void main(String[] args) {
-        DatagramSocket socket = null; // Socket to send data
-        Scanner scanner = new Scanner(System.in); // Scanner to read user input
+        String filePath = "main.c";
+        try (DatagramSocket clientSocket = new DatagramSocket();
+             FileInputStream fileInputStream = new FileInputStream(filePath)) {
 
-        try {
-            // Step 1: Create a DatagramSocket to send the data
-            socket = new DatagramSocket();
+            InetAddress serverAddress = InetAddress.getByName(SERVER_ADDRESS);
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int bytesRead;
 
-            // Get the IP address of the server (in this case, localhost)
-            InetAddress ip = InetAddress.getByName(SERVER_ADDRESS);
+            while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                DatagramPacket sendPacket = new DatagramPacket(buffer, bytesRead, serverAddress, SERVER_PORT);
+                clientSocket.send(sendPacket);
 
-            System.out.println("Client started. Type messages to send to the server (type 'bye' to exit):");
+                // Wait for acknowledgment
+                byte[] ackBuffer = new byte[BUFFER_SIZE];
+                DatagramPacket ackPacket = new DatagramPacket(ackBuffer, ackBuffer.length);
+                clientSocket.receive(ackPacket);
 
-            byte[] buffer; // Buffer to store message in bytes
-
-            // Continuously send messages until the user types "bye"
-            while (true) {
-                // Get the user input
-                String message = scanner.nextLine();
-
-                // Convert the message to bytes
-                buffer = message.getBytes();
-
-                // Step 2: Create the DatagramPacket to send the data
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, ip, SERVER_PORT);
-
-                // Step 3: Send the packet
-                socket.send(packet);
-
-                // Exit the loop if the user types "bye"
-                if (message.equalsIgnoreCase("bye")) {
-                    System.out.println("Client exiting...");
-                    break;
+                String ackMessage = new String(ackPacket.getData(), 0, ackPacket.getLength());
+                if (!ackMessage.equals("ACK")) {
+                    System.out.println("Failed to receive acknowledgment. Resending packet...");
+                    clientSocket.send(sendPacket); // Resend packet if acknowledgment is not received
                 }
             }
 
-        } catch (UnknownHostException e) {
-            System.err.println("Host unknown: " + e.getMessage());
+            // Send an "END" message to indicate the end of file transfer
+            byte[] endMessage = "END".getBytes();
+            DatagramPacket endPacket = new DatagramPacket(endMessage, endMessage.length, serverAddress, SERVER_PORT);
+            clientSocket.send(endPacket);
+
+            System.out.println("File sent successfully.");
         } catch (IOException e) {
-            System.err.println("I/O error occurred: " + e.getMessage());
-        } finally {
-            // Step 4: Close the socket and scanner to release resources
-            if (socket != null && !socket.isClosed()) {
-                socket.close();
-                System.out.println("Socket closed.");
-            }
-            if (scanner != null) {
-                scanner.close();
-                System.out.println("Scanner closed.");
-            }
+            e.printStackTrace();
         }
     }
 }
