@@ -1,6 +1,17 @@
 
 import java.util.*;
 
+
+public class SelectiveRepeatARQ {
+    public static void main(String[] args) {
+        Receiver receiver = new Receiver(null);
+        Sender sender = new Sender(receiver);
+        receiver = new Receiver(sender);
+        sender.sendPackets();
+    }
+}
+
+
 class Packet {
     int sequenceNumber;
     String data;
@@ -84,14 +95,5 @@ class Receiver {
             System.out.println("Receiver: Requesting retransmission for packet " + packetNumber);
             sender.sendPackets(); 
         }
-    }
-}
-
-public class SelectiveRepeatARQ {
-    public static void main(String[] args) {
-        Receiver receiver = new Receiver(null);
-        Sender sender = new Sender(receiver);
-        receiver = new Receiver(sender);
-        sender.sendPackets();
     }
 }
