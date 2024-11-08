@@ -1,91 +1,105 @@
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
 
-
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-
-/**
- * TCP Server that listens for client connections and receives messages.
- * The server waits for a client to connect, reads messages from the client,
- * and terminates when the client sends the message "Over".
- */
 public class Server {
+    public static void main(String[] args) {
+        try (ServerSocket serverSocket = new ServerSocket(8080)) {
+            System.out.println("Server started, waiting for clients...");
+            while (true) {
+                try (Socket socket = serverSocket.accept()) {
+                    System.out.println("Client connected: " + socket.getInetAddress());
+                    DataInputStream in = new DataInputStream(socket.getInputStream());
+                    DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-    private Socket socket = null;            // Client socket
-    private ServerSocket server = null;      // Server socket
-    private DataInputStream in = null;       // Input stream to read data from the client
-
-    /**
-     * Constructor to start the server on a given port.
-     * 
-     * @param port the port number on which the server listens for connections
-     */
-    public Server(int port) {
-        try {
-            // Initialize the server socket to listen on the specified port
-            server = new ServerSocket(port);
-            System.out.println("Server started on port " + port);
-
-            // Wait for a client connection
-            System.out.println("Waiting for a client ...");
-            socket = server.accept();  // Accept the client connection
-            System.out.println("Client connected.");
-
-            // Set up the input stream to receive data from the client
-            in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-
-            String message = "";
-
-            // Continuously read messages from the client until "Over" is received
-            while (!message.equals("Over")) {
-                try {
-                    message = in.readUTF();  // Read UTF-encoded message from client
-                    System.out.println("Received from client: " + message);
-                } catch (IOException e) {
-                    System.err.println("Error reading from client: " + e.getMessage());
+                    // Reading choice of operation
+                    String choice = in.readUTF();
+                    switch (choice) {
+                        case "1":
+                            helloEachOther(out, in);
+                            break;
+                        case "2":
+                            fileTransfer(socket, in);
+                            break;
+                        case "3":
+                            calculatorArithmetic(out, in);
+                            break;
+                        case "4":
+                            calculatorTrigonometry(out, in);
+                            break;
+                        default:
+                            out.writeUTF("Invalid choice");
+                    }
                 }
             }
-            
-            // Client has finished sending messages, so close the connection
-            System.out.println("Closing connection.");
-
         } catch (IOException e) {
-            System.err.println("Server error: " + e.getMessage());
-        } finally {
-            // Close resources to prevent resource leaks
-            closeConnection();
+            e.printStackTrace();
         }
     }
 
-    /**
-     * Closes the server socket and input stream to release resources.
-     */
-    private void closeConnection() {
-        try {
-            if (in != null) {
-                in.close();  // Close the input stream
-            }
-            if (socket != null) {
-                socket.close();  // Close the client socket
-            }
-            if (server != null) {
-                server.close();  // Close the server socket
-            }
-            System.out.println("Server connection closed.");
-        } catch (IOException e) {
-            System.err.println("Error closing connections: " + e.getMessage());
-        }
+    private static void helloEachOther(DataOutputStream out, DataInputStream in) throws IOException {
+        out.writeUTF("Hello from Server!");
+        String message = in.readUTF();  // Wait for the client to respond
+        System.out.println("Client: " + message);
+        out.writeUTF("Goodbye from Server!");
     }
 
-    /**
-     * Main method to start the server on the specified port.
-     *
-     * @param args Command-line arguments (not used)
-     */
-    public static void main(String[] args) {
-        int port = 12345;  // You can change this to any valid port number
-        Server server = new Server(port);  // Start the server on the specified port
+    private static void fileTransfer(Socket socket, DataInputStream in) throws IOException {
+        FileOutputStream fileOut = new FileOutputStream("rev.txt");
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        while ((bytesRead = in.read(buffer)) > 0) {
+            fileOut.write(buffer, 0, bytesRead);
+        }
+        fileOut.close();
+        System.out.println("File received.");
+    }
+
+    private static void calculatorArithmetic(DataOutputStream out, DataInputStream in) throws IOException {
+        String operation = in.readUTF();
+        double a = in.readDouble();
+        double b = in.readDouble();
+        double result;
+
+        switch (operation) {
+            case "+":
+                result = a + b;
+                break;
+            case "-":
+                result = a - b;
+                break;
+            case "*":
+                result = a * b;
+                break;
+            case "/":
+                result = (b != 0) ? a / b : 0;
+                break;
+            default:
+                out.writeUTF("Invalid operation");
+                return;
+        }
+        out.writeUTF("Result: " + result);
+    }
+
+    private static void calculatorTrigonometry(DataOutputStream out, DataInputStream in) throws IOException {
+        String operation = in.readUTF();
+        double value = in.readDouble();
+        double result;
+
+        switch (operation) {
+            case "sin":
+                result = Math.sin(Math.toRadians(value));
+                break;
+            case "cos":
+                result = Math.cos(Math.toRadians(value));
+                break;
+            case "tan":
+                result = Math.tan(Math.toRadians(value));
+                break;
+            default:
+                out.writeUTF("Invalid operation");
+                return;
+        }
+        out.writeUTF("Result: " + result);
     }
 }
