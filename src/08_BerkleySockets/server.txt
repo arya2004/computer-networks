@@ -1,0 +1,10 @@
+Hello Server!
+
+This is a dummy text file for testing the file transfer feature.
+You can add multiple lines, numbers, or symbols.
+
+- Line 1: Testing file transfer
+- Line 2: 1234567890
+- Line 3: !@#$%^&*()
+
+End of file.

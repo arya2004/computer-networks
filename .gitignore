@@ -4,6 +4,9 @@
 # Log file
 *.log
 
+# Python Virtual environment
+venv/
+
 # BlueJ files
 *.ctxt
 
