@@ -250,6 +250,7 @@ def main():
             if choice == "0":
                 print("exiting...\n")
                 print("bye!")
+                return
 
             # Printing an invalid request message
             if choice not in encoders:
